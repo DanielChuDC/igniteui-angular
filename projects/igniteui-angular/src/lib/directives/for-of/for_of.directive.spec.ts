@@ -14,13 +14,13 @@ import {
     ViewChild,
     ViewChildren,
     ViewContainerRef,
-    DebugElement
+    DebugElement,
+    EventEmitter
 } from '@angular/core';
 import { async, TestBed, ComponentFixture } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { IForOfState, IgxForOfDirective, IgxForOfModule } from './for_of.directive';
-import { take } from 'rxjs/operators';
 import { UIInteractions, wait } from '../../test-utils/ui-interactions.spec';
 
 import { configureTestSuite } from '../../test-utils/configure-suite';
@@ -306,7 +306,7 @@ describe('IgxForOf directive -', () => {
                 {  '1': '10', height: '150px' }
             ];
             fix.detectChanges();
-            await wait(200);
+            await wait();
             let chunkSize = (virtualContainer as any)._calcMaxChunkSize();
             expect(chunkSize).toEqual(9);
 
@@ -324,7 +324,7 @@ describe('IgxForOf directive -', () => {
                 {  '1': '10', height: '150px' }
             ];
             fix.detectChanges();
-            await wait(200);
+            await wait();
             chunkSize = (virtualContainer as any)._calcMaxChunkSize();
             expect(chunkSize).toEqual(10);
         });
@@ -333,6 +333,7 @@ describe('IgxForOf directive -', () => {
     describe('vertical and horizontal virtual component', () => {
         configureTestSuite();
         let fix: ComponentFixture<VirtualComponent>;
+        let zone: MockNgZone;
 
         beforeEach(async(() => {
             TestBed.configureTestingModule({
@@ -340,6 +341,7 @@ describe('IgxForOf directive -', () => {
                     TestIgxForOfDirective,
                     VirtualComponent
                 ],
+                providers: [{provide: NgZone, useFactory: () => zone = new MockNgZone()}],
                 imports: [IgxForOfModule]
             }).compileComponents();
         }));
@@ -795,19 +797,19 @@ describe('IgxForOf directive -', () => {
 
             forOf.scrollPrev();
             fix.detectChanges();
-            await wait(200);
+            await wait();
 
             expect(forOf.state.startIndex).toEqual(0);
 
             forOf.scrollTo(forOf.igxForOf.length - 1);
             fix.detectChanges();
-            await wait(200);
+            await wait();
 
             expect(forOf.state.startIndex).toEqual(forOf.igxForOf.length - forOf.state.chunkSize);
 
             forOf.scrollNext();
             fix.detectChanges();
-            await wait(200);
+            await wait();
 
             expect(forOf.state.startIndex).toEqual(forOf.igxForOf.length - forOf.state.chunkSize);
         });
@@ -902,7 +904,7 @@ describe('IgxForOf directive -', () => {
             // change size so that chunk size changes
             fix.componentInstance.height = '1500px';
             fix.detectChanges();
-            await wait(100);
+            await wait();
 
             expect(chunkLoadSpy).toHaveBeenCalledTimes(2);
         });
@@ -1134,6 +1136,27 @@ class DataGenerator {
             instance.data = [...this.data300x50000];
         }
     }
+}
+
+@Injectable()
+export class MockNgZone extends NgZone {
+  onStable: EventEmitter<any> = new EventEmitter(false);
+
+  constructor() {
+    super({enableLongStackTrace: false});
+  }
+
+  run(fn: Function): any {
+    return fn();
+  }
+
+  runOutsideAngular(fn: Function): any {
+    return fn();
+  }
+
+  simulateZoneExit(): void {
+    this.onStable.emit(null);
+  }
 }
 
 /** igxFor for testing */
